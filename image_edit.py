@@ -10,13 +10,6 @@ import imghdr
 from PIL import ImageDraw
 from collections import *
 
-"""
-CITATIONS
-
-I found the command for changing the desktop background from this webpage:
-http://stackoverflow.com/questions/14426475/change-wallpaper-in-python-for-user-while-being-system
-
-"""
 
 
 ################ DRAW ################
