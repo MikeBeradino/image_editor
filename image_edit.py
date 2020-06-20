@@ -1,7 +1,5 @@
 from tkinter import *
-import os
 import PIL.Image
-import ctypes
 from PIL import ImageTk
 from PIL import ImageOps
 from tkinter.filedialog import *
@@ -10,10 +8,7 @@ import imghdr
 from PIL import ImageDraw
 from collections import *
 
-
-
 ################ DRAW ################
-
 def drawOnImage(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -59,14 +54,12 @@ def drawOnImage(canvas):
     grayButton.grid(row=3, column=2)
     drawFrame.pack(side=BOTTOM)
 
-
 def colourChosen(drawWindow, canvas, colour):
     if canvas.data.image != None:
         canvas.data.drawColour = colour
         canvas.data.mainWindow.bind("<B1-Motion>", \
                                     lambda event: drawDraw(event, canvas))
     drawWindow.destroy()
-
 
 def drawDraw(event, canvas):
     if canvas.data.drawOn == True:
@@ -79,16 +72,12 @@ def drawDraw(event, canvas):
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
-
-
 ######################## FEATURES ###########################
-
 def closeHistWindow(canvas):
     if canvas.data.image != None:
         save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.histWindowClose = True
-
 
 def histogram(canvas):
     canvas.data.colourPopToHappen = False
@@ -120,7 +109,6 @@ def histogram(canvas):
     changeColours(canvas, redSlider, blueSlider, \
                   greenSlider, histWindow, histCanvas, initialRGB)
 
-
 def changeColours(canvas, redSlider, blueSlider, \
                   greenSlider, histWindow, histCanvas, previousRGB):
     if canvas.data.histWindowClose == True:
@@ -150,7 +138,6 @@ def changeColours(canvas, redSlider, blueSlider, \
             previousRGB = (sliderValR, sliderValG, sliderValB)
             canvas.after(200, lambda: changeColours(canvas, redSlider, \
                                                     blueSlider, greenSlider, histWindow, histCanvas, previousRGB))
-
 
 def displayHistogram(canvas, histWindow, histCanvas):
     histCanvasWidth = canvas.data.histCanvasWidth
@@ -197,7 +184,6 @@ def displayHistogram(canvas, histWindow, histCanvas):
                                    histCanvasHeight - pixelNo / 100.0 + 1 - margin, \
                                    fill="blue", outline="blue")
 
-
 def colourPop(canvas):
     canvas.data.cropPopToHappen = False
     canvas.data.colourPopToHappen = True
@@ -206,7 +192,6 @@ def colourPop(canvas):
                                 parent=canvas.data.mainWindow)
     if canvas.data.cropPopToHappen == False:
         canvas.data.mainWindow.bind("<ButtonPress-1>", lambda event: getPixel(event, canvas))
-
 
 def getPixel(event, canvas):
     # have to check if Colour Pop button is pressed or not, otherwise, the root
@@ -250,7 +235,6 @@ def getPixel(event, canvas):
         pass
     canvas.data.colourPopToHappen = False
 
-
 def crop(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.drawOn = False
@@ -270,13 +254,11 @@ def crop(canvas):
         canvas.data.mainWindow.bind("<ButtonRelease-1>", \
                                     lambda event: endCrop(event, canvas))
 
-
 def startCrop(event, canvas):
     # detects the start of the crop rectangle
     if canvas.data.endCrop == False and canvas.data.cropPopToHappen == True:
         canvas.data.startCropX = event.x
         canvas.data.startCropY = event.y
-
 
 def drawCrop(event, canvas):
     # keeps extending the crop rectange as the user extends
@@ -288,7 +270,6 @@ def drawCrop(event, canvas):
                                 canvas.data.startCropY,
                                 canvas.data.tempCropX, \
                                 canvas.data.tempCropY, fill="gray", stipple="gray12", width=0)
-
 
 def endCrop(event, canvas):
     # set canvas.data.endCrop=True so that button pressed movements
@@ -305,7 +286,6 @@ def endCrop(event, canvas):
         canvas.data.mainWindow.bind("<Return>", \
                                     lambda event: performCrop(event, canvas))
 
-
 def performCrop(event, canvas):
     canvas.data.image = \
         canvas.data.image.crop( \
@@ -320,7 +300,6 @@ def performCrop(event, canvas):
     canvas.data.imageForTk = makeImageForTk(canvas)
     drawImage(canvas)
 
-
 def rotateFinished(canvas, rotateWindow, rotateSlider, previousAngle):
     if canvas.data.rotateWindowClose == True:
         rotateWindow.destroy()
@@ -334,9 +313,8 @@ def rotateFinished(canvas, rotateWindow, rotateSlider, previousAngle):
                     canvas.data.image.rotate(float(canvas.data.angleSelected))
                 canvas.data.imageForTk = makeImageForTk(canvas)
                 drawImage(canvas)
-        canvas.after(200, lambda: rotateFinished(canvas, \
+        canvas.after(200, lambda: rotateFinished(canvas,
                                                  rotateWindow, rotateSlider, canvas.data.angleSelected))
-
 
 def closeRotateWindow(canvas):
     if canvas.data.image != None:
@@ -344,8 +322,7 @@ def closeRotateWindow(canvas):
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.rotateWindowClose = True
 
-
-def rotate(canvas):
+def rotate2(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
     canvas.data.drawOn = False
@@ -354,11 +331,24 @@ def rotate(canvas):
     rotateSlider = Scale(rotateWindow, from_=0, to=360, orient=HORIZONTAL)
     rotateSlider.pack()
     OkRotateFrame = Frame(rotateWindow)
-    OkRotateButton = Button(OkRotateFrame, text="OK", \
+    OkRotateButton = Button(OkRotateFrame, text="OK",
                             command=lambda: closeRotateWindow(canvas))
     OkRotateButton.grid(row=0, column=0)
     OkRotateFrame.pack(side=BOTTOM)
     rotateFinished(canvas, rotateWindow, rotateSlider, 0)
+
+def apply(canvas):
+        save(canvas)
+
+def rotate(canvas):
+    if canvas.data.image != None:
+        angel = rotate_slider.get()
+        canvas.data.image = canvas.data.image.rotate(float(angel))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        drawImage(canvas)
+
+
+
 
 
 def closeBrightnessWindow(canvas):
@@ -366,7 +356,6 @@ def closeBrightnessWindow(canvas):
         save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.brightnessWindowClose = True
-
 
 def changeBrightness(canvas, brightnessWindow, brightnessSlider, \
                      previousVal):
@@ -389,7 +378,6 @@ def changeBrightness(canvas, brightnessWindow, brightnessSlider, \
                          lambda: changeBrightness(canvas, brightnessWindow, \
                                                   brightnessSlider, sliderVal))
 
-
 def brightness(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -407,7 +395,6 @@ def brightness(canvas):
     changeBrightness(canvas, brightnessWindow, brightnessSlider, 0)
     brightnessSlider.set(0)
 
-
 def reset(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -420,7 +407,6 @@ def reset(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 def mirror(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -432,18 +418,16 @@ def mirror(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 def flip(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
     canvas.data.drawOn = False
     if canvas.data.image != None:
         canvas.data.image = ImageOps.flip(canvas.data.image)
-        save(canvas)
+
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
-
 
 def transpose(canvas):
     canvas.data.colourPopToHappen = False
@@ -470,7 +454,6 @@ def transpose(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 ############### FILTERS ######################
 
 def covertGray(canvas):
@@ -495,7 +478,6 @@ def covertGray(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 def sepia(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -516,7 +498,6 @@ def sepia(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 def invert(canvas):
     canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
@@ -527,7 +508,6 @@ def invert(canvas):
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
-
 
 def solarize(canvas):
     canvas.data.colourPopToHappen = False
@@ -543,7 +523,6 @@ def solarize(canvas):
     OkSolarizeFrame.pack(side=BOTTOM)
     ### beacsue intial silderVal=0
     performSolarize(canvas, solarizeWindow, solarizeSlider, 255)
-
 
 def performSolarize(canvas, solarizeWindow, solarizeSlider, previousThreshold):
     if canvas.data.solarizeWindowClose == True:
@@ -565,13 +544,11 @@ def performSolarize(canvas, solarizeWindow, solarizeSlider, previousThreshold):
             canvas.after(200, lambda: performSolarize(canvas, \
                                                       solarizeWindow, solarizeSlider, threshold_))
 
-
 def closeSolarizeWindow(canvas):
     if canvas.data.image != None:
         save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.solarizeWindowClose = True
-
 
 def posterize(canvas):
     canvas.data.colourPopToHappen = False
@@ -622,7 +599,6 @@ def posterize(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 ################ EDIT MENU FUNCTIONS ############################
 
 def keyPressed(canvas, event):
@@ -631,11 +607,6 @@ def keyPressed(canvas, event):
     elif event.keysym == "y":
         redo(canvas)
 
-
-# we use deques so as to make Undo and Redo more efficient and avoid
-# memory space isuues
-# after each change, we append the new version of the image to
-# the Undo queue
 def undo(canvas):
     if len(canvas.data.undoQueue) > 0:
         # the last element of the Undo Deque is the
@@ -650,7 +621,6 @@ def undo(canvas):
     canvas.data.imageForTk = makeImageForTk(canvas)
     drawImage(canvas)
 
-
 def redo(canvas):
     if len(canvas.data.redoQueue) > 0:
         canvas.data.image = canvas.data.redoQueue[0]
@@ -663,7 +633,6 @@ def redo(canvas):
     canvas.data.imageForTk = makeImageForTk(canvas)
     drawImage(canvas)
 
-
 ############# MENU COMMANDS ################
 
 def saveAs(canvas):
@@ -673,12 +642,10 @@ def saveAs(canvas):
         im = canvas.data.image
         im.save(filename)
 
-
 def save(canvas):
     if canvas.data.image != None:
         im = canvas.data.image
         im.save(canvas.data.imageLocation)
-
 
 def newImage(canvas):
     imageName = askopenfilename()
@@ -687,11 +654,13 @@ def newImage(canvas):
     try:
         filetype = imghdr.what(imageName)
     except:
-        tkinter.messagebox.showinfo(title="Image File", \
+        tkinter.messagebox.showinfo(title="Image File",
                                     message="Choose an Image File!", parent=canvas.data.mainWindow)
     # restrict filetypes to .jpg, .bmp, etc.
     if filetype in ['jpeg', 'bmp', 'png', 'tiff']:
+
         canvas.data.imageLocation = imageName
+
         print(imageName)
         im = PIL.Image.open(imageName)
         canvas.data.image = im
@@ -701,9 +670,8 @@ def newImage(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
     else:
-        tkinter.messagebox.showinfo(title="Image File", \
+        tkinter.messagebox.showinfo(title="Image File",
                                     message="Choose an Image File!", parent=canvas.data.mainWindow)
-
 
 ######## CREATE A VERSION OF IMAGE TO BE DISPLAYED ON THE CANVAS #########
 
@@ -728,7 +696,6 @@ def makeImageForTk(canvas):
         canvas.data.resizedIm = resizedImage
         return ImageTk.PhotoImage(resizedImage)
 
-
 def drawImage(canvas):
     if canvas.data.image != None:
         # make the canvas center and the image center the same
@@ -738,11 +705,7 @@ def drawImage(canvas):
         canvas.data.imageTopX = int(round(canvas.data.width / 2.0 - canvas.data.resizedIm.size[0] / 2.0))
         canvas.data.imageTopY = int(round(canvas.data.height / 2.0 - canvas.data.resizedIm.size[1] / 2.0))
 
-
-
-
 ############ INITIALIZE ##############
-
 def init(root, canvas):
     buttonsInit(root, canvas)
     menuInit(root, canvas)
@@ -758,89 +721,132 @@ def init(root, canvas):
     canvas.data.cropPopToHappen = False
     canvas.data.endCrop = False
     canvas.data.drawOn = True
-
     canvas.data.undoQueue = deque([], 10)
     canvas.data.redoQueue = deque([], 10)
-    canvas.pack()
-
+    canvas.configure(background='gray10')
+    canvas.pack(side=RIGHT)
 
 def buttonsInit(root, canvas):
     backgroundColour = "gray20"
-    highlightbackground="gray20"
-    activebackground = "deep sky blue"
+    highlightbackground = "gray20"
+    activebackground = "deepskyblue"
     fg = "lime green"
-    buttonWidth = 14
-    buttonHeight = 2
+    buttonWidth = 15
+    buttonHeight = 1
     toolKitFrame = Frame(root)
-    cropButton = Button(toolKitFrame, text="Crop", \
-                        highlightbackground= highlightbackground, activebackground =  activebackground, fg="lime green",
-                        background=backgroundColour, \
-                        width=buttonWidth, height=buttonHeight, \
-                        command=lambda: crop(canvas))
-    cropButton.grid(row=0, column=2)
-    rotateButton = Button(toolKitFrame, text="Rotate", \
-                          highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                          background=backgroundColour, \
-                          width=buttonWidth, height=buttonHeight, \
-                          command=lambda: rotate(canvas))
-    rotateButton.grid(row=1, column=2)
-    brightnessButton = Button(toolKitFrame, text="Brightness", \
-                              highlightbackground=highlightbackground, activebackground=activebackground,
-                              fg="lime green",
-                              background=backgroundColour, \
-                              width=buttonWidth, height=buttonHeight, \
-                              command=lambda: brightness(canvas))
-    brightnessButton.grid(row=2, column=2)
-    histogramButton = Button(toolKitFrame, text="Histogram", \
-                             highlightbackground=highlightbackground, activebackground=activebackground,
-                             fg="lime green",
-                             background=backgroundColour, \
-                             width=buttonWidth, height=buttonHeight, \
-                             command=lambda: histogram(canvas))
-    histogramButton.grid(row=3, column=2)
-    colourPopButton = Button(toolKitFrame, text="Colour Pop", \
-                             highlightbackground=highlightbackground, activebackground=activebackground,
-                             fg="lime green",
-                             background=backgroundColour, \
-                             width=buttonWidth, height=buttonHeight, \
-                             command=lambda: colourPop(canvas))
-    colourPopButton.grid(row=4, column=2)
-    mirrorButton = Button(toolKitFrame, text="Mirror", \
-                          highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                          background=backgroundColour, \
-                          width=buttonWidth, height=buttonHeight, \
-                          command=lambda: mirror(canvas))
-    mirrorButton.grid(row=5, column=2)
-    flipButton = Button(toolKitFrame, text="Flip", \
-                        highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                        background=backgroundColour, \
-                        width=buttonWidth, height=buttonHeight, \
-                        command=lambda: flip(canvas))
-    flipButton.grid(row=6, column=2)
-    transposeButton = Button(toolKitFrame, text="Transpose", \
-                             highlightbackground=highlightbackground, activebackground=activebackground,
-                             fg="lime green",
-                             background=backgroundColour, width=buttonWidth, \
-                             height=buttonHeight, command=lambda: transpose(canvas))
-    transposeButton.grid(row=7, column=2)
-    drawButton = Button(toolKitFrame, text="Draw", \
-                        highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                        background=backgroundColour, width=buttonWidth, \
-                        height=buttonHeight, command=lambda: drawOnImage(canvas))
-    drawButton.grid(row=8, column=2)
-    resetButton = Button(toolKitFrame, text="Reset", \
-                         highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                         background=backgroundColour, width=buttonWidth, \
-                         height=buttonHeight, command=lambda: reset(canvas))
-    resetButton.grid(row=9, column=2)
-    # Please comment this button out if you use this on any OS apart from Windows
-    desktopButton = Button(toolKitFrame, text="NOT USED", \
-                           highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
-                           background=backgroundColour, height=buttonHeight, \
-                           width=buttonWidth) # command="")
-    desktopButton.grid(row=10, column=2)
-    toolKitFrame.pack(side=LEFT)
 
+    cropButton = Button(toolKitFrame, text="Crop",
+                        activebackground=activebackground, fg=fg,
+                        background=backgroundColour,
+                        width=buttonWidth, height=buttonHeight,
+                        command=lambda: crop(canvas))
+    cropButton.grid(row=0, column=0)
+
+    rotateButton = Button(toolKitFrame, text="Rotate",
+                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                          background=backgroundColour,
+                          width=buttonWidth, height=buttonHeight,
+                          command=lambda: rotate(canvas))
+    rotateButton.grid(row=1, column=0)
+    apply_Button = Button(toolKitFrame, text="Apply",
+                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                          background=backgroundColour,
+                          width=buttonWidth, height=buttonHeight,
+                          command=lambda: apply(canvas))
+    apply_Button.grid(row=9, column=0)
+    brightnessButton = Button(toolKitFrame, text="Brightness",
+                              highlightbackground=highlightbackground, activebackground=activebackground,
+                              fg=fg,
+                              background=backgroundColour,
+                              width=buttonWidth, height=buttonHeight,
+                              command=lambda: brightness(canvas))
+    brightnessButton.grid(row=2, column=0)
+    histogramButton = Button(toolKitFrame, text="Histogram",
+                             highlightbackground=highlightbackground, activebackground=activebackground,
+                             fg=fg,
+                             background=backgroundColour,
+                             width=buttonWidth, height=buttonHeight * 4,
+                             command=lambda: histogram(canvas))
+    histogramButton.grid(row=3, column=0)
+    colourPopButton = Button(toolKitFrame, text="Colour Pop",
+                             highlightbackground=highlightbackground, activebackground=activebackground,
+                             fg=fg,
+                             background=backgroundColour,
+                             width=buttonWidth, height=buttonHeight,
+                             command=lambda: colourPop(canvas))
+    colourPopButton.grid(row=4, column=0)
+
+    drawButton = Button(toolKitFrame, text="Draw",
+                        highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                        background=backgroundColour, width=buttonWidth,
+                        height=buttonHeight, command=lambda: drawOnImage(canvas))
+    drawButton.grid(row=5, column=0)
+    resetButton = Button(toolKitFrame, text="Reset",
+                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=buttonWidth,
+                         height=buttonHeight, command=lambda: reset(canvas))
+    resetButton.grid(row=6, column=0)
+    desktopButton = Button(toolKitFrame, text="NOT USED",
+                           highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                           background=backgroundColour, width=buttonWidth,
+                           height=buttonHeight, command="")
+    desktopButton.grid(row=7, column=0)
+    mirrorButton = Button(toolKitFrame, text="Mirror",
+                          highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
+                          background=backgroundColour,
+                          width=int(buttonWidth / 4), height=buttonHeight,
+                          command=lambda: mirror(canvas))
+    mirrorButton.grid(row=8, column=0, sticky=W)
+
+    flipButton = Button(toolKitFrame, text="Flip",
+                        highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
+                        background=backgroundColour,
+                        width=int(buttonWidth / 4), height=buttonHeight,
+                        command=lambda: flip(canvas))
+    flipButton.grid(row=8, column=0, sticky=S)
+
+    transposeButton = Button(toolKitFrame, text="Trans",
+                             highlightbackground=highlightbackground, activebackground=activebackground,
+                             fg="lime green",
+                             background=backgroundColour, width=int(buttonWidth / 4),
+                             height=buttonHeight, command=lambda: transpose(canvas))
+    transposeButton.grid(row=8, column=0, sticky=E)
+
+    #################################### SCALES ####################################
+    global rotate_slider
+    rotate_slider = Scale(toolKitFrame, from_=0, to=360, length=100, width=7, font=('Helvetica', '8'),
+                          orient=HORIZONTAL,
+                          bg="gray20",
+                          fg="lime green",
+                          highlightbackground="gray", activebackground="deep sky blue", troughcolor="White")
+    rotate_slider.grid(row=1, column=1)
+    global bright_slider
+    bright_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'),
+                          orient=HORIZONTAL,
+                          bg="gray20",
+                          fg="lime green",
+                          highlightbackground="gray", activebackground="deep sky blue", troughcolor="White")
+    bright_slider.grid(row=2, column=1)
+    global Red_slider
+    Red_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                       bg="gray20",
+                       fg="lime green",
+                       highlightbackground="gray", activebackground="deep sky blue", troughcolor="Red")
+    Red_slider.grid(row=3, column=1, sticky=N)
+    global Green_slider
+    Green_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                         bg="gray20",
+                         fg="lime green",
+                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="Green")
+    Green_slider.grid(row=3, column=1, sticky=S)
+    global Blue_slider
+    Blue_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="Blue")
+    Blue_slider.grid(row=3, column=1)
+    toolKitFrame.configure(background='gray20')
+    toolKitFrame.place(x=0, y=0)
 
 def menuInit(root, canvas):
     menubar = Menu(root)
@@ -855,36 +861,39 @@ def menuInit(root, canvas):
     root.config(menu=menubar)
     ## Filter pull-down Menu
     filtermenu = Menu(menubar, tearoff=0)
-    filtermenu.add_command(label="Black and White", \
+    filtermenu.add_command(label="Black and White",
                            command=lambda: covertGray(canvas))
-    filtermenu.add_command(label="Sepia", \
+    filtermenu.add_command(label="Sepia",
                            command=lambda: sepia(canvas))
-    filtermenu.add_command(label="Invert", \
+    filtermenu.add_command(label="Invert",
                            command=lambda: invert(canvas))
-    filtermenu.add_command(label="Solarize", \
+    filtermenu.add_command(label="Solarize",
                            command=lambda: solarize(canvas))
-    filtermenu.add_command(label="Posterize", \
+    filtermenu.add_command(label="Posterize",
                            command=lambda: posterize(canvas))
     menubar.add_cascade(label="Filter", menu=filtermenu)
     root.config(menu=menubar)
 
-
-
-
 def run():
-    # create the root and the canvas
+    root_width = "855"
+    root_height = "500"
     root = Tk()
-    root.title("Image Editor")
+    root.geometry(root_width + "x" + root_height)  # Width x Height
+    root.title("raster-edit")
     canvasWidth = 600
     canvasHeight = 500
+    # ***main menue***
+    menu = Menu(root)
+    root.config(menu=menu)
+
     root.configure(background='gray20')
+
 
     canvas = Canvas(root, width=canvasWidth, height=canvasHeight,
                     background="gray20")
 
     # Set up canvas data and call init
     class Struct: pass
-
     canvas.data = Struct()
     canvas.data.width = canvasWidth
     canvas.data.height = canvasHeight
