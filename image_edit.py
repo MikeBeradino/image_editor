@@ -2,11 +2,13 @@ from tkinter import *
 import PIL.Image
 from PIL import ImageTk
 from PIL import ImageOps
+from PIL import ImageEnhance
 from tkinter.filedialog import *
 import tkinter.messagebox
 import imghdr
 from PIL import ImageDraw
 from collections import *
+import center_tk_window
 
 ################ DRAW ################
 def drawOnImage(canvas):
@@ -74,10 +76,7 @@ def drawDraw(event, canvas):
         drawImage(canvas)
 ######################## FEATURES ###########################
 def closeHistWindow(canvas):
-    if canvas.data.image != None:
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.histWindowClose = True
+    canvas.data.histWindowClose = True
 
 def histogram(canvas):
     canvas.data.colourPopToHappen = False
@@ -85,59 +84,70 @@ def histogram(canvas):
     canvas.data.drawOn = False
     histWindow = Toplevel(canvas.data.mainWindow)
     histWindow.title("Histogram")
-    canvas.data.histCanvasWidth = 350
-    canvas.data.histCanvasHeight = 475
-    histCanvas = Canvas(histWindow, width=canvas.data.histCanvasWidth, \
-                        height=canvas.data.histCanvasHeight)
-    histCanvas.pack()
-    # provide sliders to the user to manipulate red, green and blue amounts in the image
-    redSlider = Scale(histWindow, from_=-100, to=100, \
-                      orient=HORIZONTAL, label="R")
-    redSlider.pack()
-    blueSlider = Scale(histWindow, from_=-100, to=100, \
-                       orient=HORIZONTAL, label="B")
-    blueSlider.pack()
-    greenSlider = Scale(histWindow, from_=-100, to=100, \
-                        orient=HORIZONTAL, label="G")
-    greenSlider.pack()
-    OkHistFrame = Frame(histWindow)
-    OkHistButton = Button(OkHistFrame, text="OK", \
-                          command=lambda: closeHistWindow(canvas))
-    OkHistButton.grid(row=0, column=0)
-    OkHistFrame.pack(side=BOTTOM)
-    initialRGB = (0, 0, 0)
-    changeColours(canvas, redSlider, blueSlider, \
-                  greenSlider, histWindow, histCanvas, initialRGB)
+    histWindow.configure(background='gray20')
 
-def changeColours(canvas, redSlider, blueSlider, \
-                  greenSlider, histWindow, histCanvas, previousRGB):
+    canvas.data.histCanvasWidth = 350
+    canvas.data.histCanvasHeight = 200
+    histCanvas = Canvas(histWindow, width=canvas.data.histCanvasWidth, height=canvas.data.histCanvasHeight, background="gray50")
+
+    histCanvas.pack()
+
+
+    redSlider = Scale(histWindow, from_=0, to=2, resolution = .1 , length=200, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                       bg="gray20",
+                       fg="lime green",
+                       highlightbackground="gray", activebackground="deep sky blue", troughcolor="Red", label="RED")
+    redSlider.set(1)
+    #redSlider.grid(row=1, column=0, sticky=N)
+    redSlider.pack()
+    
+    greenSlider = Scale(histWindow, from_=0, to=2, resolution = .1 ,length=200, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                         bg="gray20",
+                         fg="lime green",
+                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="Green", label="GREEN")
+    #greenSlider.grid(row=2, column=0, sticky=S)
+    greenSlider.set(1)
+    greenSlider.pack()
+    blueSlider = Scale(histWindow, from_=0, to=2, resolution = .1 ,length=200, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="Blue",label="BLUE")
+    #blueSlider.grid(row=3, column=0)
+    blueSlider.set(1)
+    blueSlider.pack()
+
+    OkHistFrame = Frame(histWindow)
+    OkHistButton = Button(OkHistFrame, text="OK",command=lambda: canvas.after(200, lambda: changeColours(canvas, redSlider,blueSlider, greenSlider, histWindow, histCanvas, initialRGB)),background="gray20",fg="lime green",font=('Helvetica', '8'),)
+
+    OkHistButton.grid(row=1, column=1)
+    OkHistFrame.pack(side=RIGHT)
+    initialRGB = (1, 1, 1)
+    center_tk_window.center_on_screen(histWindow)
+    changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCanvas, initialRGB)
+
+
+
+
+def changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCanvas, previousRGB):
     if canvas.data.histWindowClose == True:
         histWindow.destroy()
         canvas.data.histWindowClose = False
     else:
-        # the slider value indicates the % by which the red/green/blue
-        # value of the pixels of the image need to incresed (for +ve values)
-        # or decreased (for -ve values)
-        if canvas.data.image != None and histWindow.winfo_exists():
-            R, G, B = canvas.data.image.split()
-            sliderValR = redSlider.get()
-            (previousR, previousG, previousB) = previousRGB
-            scaleR = (sliderValR - previousR) / 100.0
-            R = R.point(lambda i: i + int(round(i * scaleR)))
-            sliderValG = greenSlider.get()
-            scaleG = (sliderValG - previousG) / 100.0
-            G = G.point(lambda i: i + int(round(i * scaleG)))
-            sliderValB = blueSlider.get()
-            scaleB = (sliderValB - previousB) / 100.0
-            B = B.point(lambda i: i + int(round(i * scaleB)))
-            canvas.data.image = PIL.Image.merge(canvas.data.image.mode, (R, G, B))
 
+        if canvas.data.image != None and histWindow.winfo_exists():
+            sliderValR = redSlider.get()
+            sliderValG = greenSlider.get()
+            sliderValB = blueSlider.get()
+            Matrix = (float(sliderValR), 0, 0,0,
+                      0, float(sliderValG), 0, 0,
+                      0, 0, float(sliderValB), 0)
+            # Apply transform and save
+            canvas.data.image = canvas.data.image.convert("RGB", Matrix)
             canvas.data.imageForTk = makeImageForTk(canvas)
             drawImage(canvas)
             displayHistogram(canvas, histWindow, histCanvas)
-            previousRGB = (sliderValR, sliderValG, sliderValB)
-            canvas.after(200, lambda: changeColours(canvas, redSlider, \
-                                                    blueSlider, greenSlider, histWindow, histCanvas, previousRGB))
+
+
 
 def displayHistogram(canvas, histWindow, histCanvas):
     histCanvasWidth = canvas.data.histCanvasWidth
@@ -300,100 +310,52 @@ def performCrop(event, canvas):
     canvas.data.imageForTk = makeImageForTk(canvas)
     drawImage(canvas)
 
-def rotateFinished(canvas, rotateWindow, rotateSlider, previousAngle):
-    if canvas.data.rotateWindowClose == True:
-        rotateWindow.destroy()
-        canvas.data.rotateWindowClose = False
-    else:
-        if canvas.data.image != None and rotateWindow.winfo_exists():
-            canvas.data.angleSelected = rotateSlider.get()
-            if canvas.data.angleSelected != None and \
-                    canvas.data.angleSelected != previousAngle:
-                canvas.data.image = \
-                    canvas.data.image.rotate(float(canvas.data.angleSelected))
-                canvas.data.imageForTk = makeImageForTk(canvas)
-                drawImage(canvas)
-        canvas.after(200, lambda: rotateFinished(canvas,
-                                                 rotateWindow, rotateSlider, canvas.data.angleSelected))
-
-def closeRotateWindow(canvas):
-    if canvas.data.image != None:
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.rotateWindowClose = True
-
-def rotate2(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    rotateWindow = Toplevel(canvas.data.mainWindow)
-    rotateWindow.title("Rotate")
-    rotateSlider = Scale(rotateWindow, from_=0, to=360, orient=HORIZONTAL)
-    rotateSlider.pack()
-    OkRotateFrame = Frame(rotateWindow)
-    OkRotateButton = Button(OkRotateFrame, text="OK",
-                            command=lambda: closeRotateWindow(canvas))
-    OkRotateButton.grid(row=0, column=0)
-    OkRotateFrame.pack(side=BOTTOM)
-    rotateFinished(canvas, rotateWindow, rotateSlider, 0)
-
 def apply(canvas):
         save(canvas)
 
 def rotate(canvas):
+
     if canvas.data.image != None:
         angel = rotate_slider.get()
         canvas.data.image = canvas.data.image.rotate(float(angel))
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
-
-
-
-def closeBrightnessWindow(canvas):
+def Sharpness(canvas):
+    print("sharp")
     if canvas.data.image != None:
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.brightnessWindowClose = True
+        enhancer = ImageEnhance.Sharpness(canvas.data.image)
+        sharp_val = Sharpness_slider.get()
+        canvas.data.image =enhancer.enhance(float(sharp_val))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        drawImage(canvas)
 
-def changeBrightness(canvas, brightnessWindow, brightnessSlider, \
-                     previousVal):
-    if canvas.data.brightnessWindowClose == True:
-        brightnessWindow.destroy()
-        canvas.data.brightnessWindowClose = False
+def Contrast(canvas):
+    print("conrast")
+    if canvas.data.image != None:
+        enhancer = ImageEnhance.Contrast(canvas.data.image)
+        contarst_val = Contrast_slider.get()
+        canvas.data.image =enhancer.enhance(float(contarst_val))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        drawImage(canvas)
 
-    else:
-        # increasing pixel values according to slider value increases
-        # brightness we change ot according to the difference between the
-        # previous value and the current slider value
-        if canvas.data.image != None and brightnessWindow.winfo_exists():
-            sliderVal = brightnessSlider.get()
-            scale = (sliderVal - previousVal) / 100.0
-            canvas.data.image = canvas.data.image.point( \
-                lambda i: i + int(round(i * scale)))
-            canvas.data.imageForTk = makeImageForTk(canvas)
-            drawImage(canvas)
-            canvas.after(200, \
-                         lambda: changeBrightness(canvas, brightnessWindow, \
-                                                  brightnessSlider, sliderVal))
+def Color_shift(canvas):
+    print("bright")
+    if canvas.data.image != None:
+        enhancer = ImageEnhance.Color(canvas.data.image)
+        color_val = Color_slider.get()
+        canvas.data.image = enhancer.enhance(float(color_val))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        drawImage(canvas)
 
 def brightness(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    brightnessWindow = Toplevel(canvas.data.mainWindow)
-    brightnessWindow.title("Brightness")
-    brightnessSlider = Scale(brightnessWindow, from_=-100, to=100, \
-                             orient=HORIZONTAL)
-    brightnessSlider.pack()
-    OkBrightnessFrame = Frame(brightnessWindow)
-    OkBrightnessButton = Button(OkBrightnessFrame, text="OK", \
-                                command=lambda: closeBrightnessWindow(canvas))
-    OkBrightnessButton.grid(row=0, column=0)
-    OkBrightnessFrame.pack(side=BOTTOM)
-    changeBrightness(canvas, brightnessWindow, brightnessSlider, 0)
-    brightnessSlider.set(0)
+    print("bright")
+    if canvas.data.image != None:
+        enhancer = ImageEnhance.Brightness(canvas.data.image)
+        bright_val = bright_slider.get()
+        canvas.data.image =enhancer.enhance(float(bright_val))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        drawImage(canvas)
 
 def reset(canvas):
     canvas.data.colourPopToHappen = False
@@ -402,7 +364,7 @@ def reset(canvas):
     ### change back to original image
     if canvas.data.image != None:
         canvas.data.image = canvas.data.originalImage.copy()
-        save(canvas)
+        #save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
@@ -413,7 +375,7 @@ def mirror(canvas):
     canvas.data.drawOn = False
     if canvas.data.image != None:
         canvas.data.image = ImageOps.mirror(canvas.data.image)
-        save(canvas)
+        #save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
@@ -453,6 +415,40 @@ def transpose(canvas):
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
+
+def Color_Mode(canvas):
+
+    if canvas.data.image != None:
+        dithering = FLOYDSTEINBERG.get()
+        color_numbers = numb_colors_P.get()
+        color_mode = (var_set.get())
+        pallet = (WEB.get())
+        if color_mode ==  "1-Bit-B/W " :
+
+            canvas.data.image = canvas.data.image.convert("1", dither=int(dithering))
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
+
+        if color_mode == "8-bit-GRAY" :
+
+            canvas.data.image = canvas.data.image.convert("L", dither=int(dithering))
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
+
+        if color_mode == "Mapped    " :
+
+            canvas.data.image = canvas.data.image.convert("P", dither=int(dithering), palette=int(pallet),colors= int(color_numbers))
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
+        if color_mode == "8-bit-RGB ":
+            canvas.data.image = canvas.data.image.convert("RGB")
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
+
+        if color_mode == "8-bit-CMYK":
+            canvas.data.image = canvas.data.image.convert("CMYK")
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
 
 ############### FILTERS ######################
 
@@ -517,7 +513,7 @@ def solarize(canvas):
     solarizeSlider = Scale(solarizeWindow, from_=0, to=255, orient=HORIZONTAL)
     solarizeSlider.pack()
     OkSolarizeFrame = Frame(solarizeWindow)
-    OkSolarizeButton = Button(OkSolarizeFrame, text="OK", \
+    OkSolarizeButton = Button(OkSolarizeFrame, text="OK",
                               command=lambda: closeSolarizeWindow(canvas))
     OkSolarizeButton.grid(row=0, column=0)
     OkSolarizeFrame.pack(side=BOTTOM)
@@ -530,18 +526,18 @@ def performSolarize(canvas, solarizeWindow, solarizeSlider, previousThreshold):
         canvas.data.solarizeWindowClose = False
 
     else:
-        # the  slider denotes the % of solarization thta the user wants,
+        # the  slider denotes the % of solarization that the user wants,
         # so the threshold (above which pixels are inverted) is inversely
         # related to the slider value
         if solarizeWindow.winfo_exists():
             sliderVal = solarizeSlider.get()
             threshold_ = 255 - sliderVal
             if canvas.data.image != None and threshold_ != previousThreshold:
-                canvas.data.image = ImageOps.solarize(canvas.data.image, \
+                canvas.data.image = ImageOps.solarize(canvas.data.image,
                                                       threshold=threshold_)
                 canvas.data.imageForTk = makeImageForTk(canvas)
                 drawImage(canvas)
-            canvas.after(200, lambda: performSolarize(canvas, \
+            canvas.after(200, lambda: performSolarize(canvas,
                                                       solarizeWindow, solarizeSlider, threshold_))
 
 def closeSolarizeWindow(canvas):
@@ -599,39 +595,6 @@ def posterize(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-################ EDIT MENU FUNCTIONS ############################
-
-def keyPressed(canvas, event):
-    if event.keysym == "z":
-        undo(canvas)
-    elif event.keysym == "y":
-        redo(canvas)
-
-def undo(canvas):
-    if len(canvas.data.undoQueue) > 0:
-        # the last element of the Undo Deque is the
-        # current version of the image
-        lastImage = canvas.data.undoQueue.pop()
-        # we would want the current version if wehit redo after undo
-        canvas.data.redoQueue.appendleft(lastImage)
-    if len(canvas.data.undoQueue) > 0:
-        # the previous version of the image
-        canvas.data.image = canvas.data.undoQueue[-1]
-    save(canvas)
-    canvas.data.imageForTk = makeImageForTk(canvas)
-    drawImage(canvas)
-
-def redo(canvas):
-    if len(canvas.data.redoQueue) > 0:
-        canvas.data.image = canvas.data.redoQueue[0]
-    save(canvas)
-    if len(canvas.data.redoQueue) > 0:
-        # we remove this version from the Redo Deque beacuase it
-        # has become our current image
-        lastImage = canvas.data.redoQueue.popleft()
-        canvas.data.undoQueue.append(lastImage)
-    canvas.data.imageForTk = makeImageForTk(canvas)
-    drawImage(canvas)
 
 ############# MENU COMMANDS ################
 
@@ -660,7 +623,6 @@ def newImage(canvas):
     if filetype in ['jpeg', 'bmp', 'png', 'tiff']:
 
         canvas.data.imageLocation = imageName
-
         print(imageName)
         im = PIL.Image.open(imageName)
         canvas.data.image = im
@@ -747,118 +709,214 @@ def buttonsInit(root, canvas):
                           background=backgroundColour,
                           width=buttonWidth, height=buttonHeight,
                           command=lambda: rotate(canvas))
-    rotateButton.grid(row=1, column=0)
+    rotateButton.grid(row=7, column=0)
     apply_Button = Button(toolKitFrame, text="Apply",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                           background=backgroundColour,
                           width=buttonWidth, height=buttonHeight,
                           command=lambda: apply(canvas))
-    apply_Button.grid(row=9, column=0)
+    apply_Button.grid(row=1, column=1)
+
     brightnessButton = Button(toolKitFrame, text="Brightness",
-                              highlightbackground=highlightbackground, activebackground=activebackground,
+                              highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground,
                               fg=fg,
                               background=backgroundColour,
-                              width=buttonWidth, height=buttonHeight,
+                              width=int(buttonWidth/1.6), height=buttonHeight,
                               command=lambda: brightness(canvas))
-    brightnessButton.grid(row=2, column=0)
+    brightnessButton.grid(row=8, column=0,sticky=W)
+    brightness_undo_Button = Button(toolKitFrame, text="UNDO",
+                                  highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                                  background=backgroundColour, width=int(buttonWidth / 4),
+                                  height=buttonHeight, command=lambda: Contrast(canvas))
+    brightness_undo_Button.grid(row=8, column=0, sticky=E)
     histogramButton = Button(toolKitFrame, text="Histogram",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg=fg,
                              background=backgroundColour,
-                             width=buttonWidth, height=buttonHeight * 4,
+                             width=buttonWidth, height=buttonHeight ,
                              command=lambda: histogram(canvas))
     histogramButton.grid(row=3, column=0)
-    colourPopButton = Button(toolKitFrame, text="Colour Pop",
+    colourPopButton = Button(toolKitFrame, text="Colour_pop",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg=fg,
                              background=backgroundColour,
                              width=buttonWidth, height=buttonHeight,
                              command=lambda: colourPop(canvas))
-    colourPopButton.grid(row=4, column=0)
+    colourPopButton.grid(row=1, column=0)
 
     drawButton = Button(toolKitFrame, text="Draw",
                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                         background=backgroundColour, width=buttonWidth,
                         height=buttonHeight, command=lambda: drawOnImage(canvas))
-    drawButton.grid(row=5, column=0)
+    drawButton.grid(row=2, column=0)
     resetButton = Button(toolKitFrame, text="Reset",
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=buttonWidth,
                          height=buttonHeight, command=lambda: reset(canvas))
-    resetButton.grid(row=6, column=0)
-    desktopButton = Button(toolKitFrame, text="NOT USED",
-                           highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
-                           background=backgroundColour, width=buttonWidth,
-                           height=buttonHeight, command="")
-    desktopButton.grid(row=7, column=0)
+    resetButton.grid(row=0, column=1)
+
     mirrorButton = Button(toolKitFrame, text="Mirror",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
                           background=backgroundColour,
                           width=int(buttonWidth / 4), height=buttonHeight,
                           command=lambda: mirror(canvas))
-    mirrorButton.grid(row=8, column=0, sticky=W)
+    mirrorButton.grid(row=5, column=0, sticky=W)
 
     flipButton = Button(toolKitFrame, text="Flip",
                         highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
                         background=backgroundColour,
                         width=int(buttonWidth / 4), height=buttonHeight,
                         command=lambda: flip(canvas))
-    flipButton.grid(row=8, column=0, sticky=S)
+    flipButton.grid(row=5, column=0, sticky=S)
 
     transposeButton = Button(toolKitFrame, text="Trans",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg="lime green",
                              background=backgroundColour, width=int(buttonWidth / 4),
                              height=buttonHeight, command=lambda: transpose(canvas))
-    transposeButton.grid(row=8, column=0, sticky=E)
+    transposeButton.grid(row=5, column=0, sticky=E)
+
+
+    ColorButton = Button(toolKitFrame, text="Color",
+                         highlightbackground=highlightbackground,anchor = "w", activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         height=buttonHeight, command=lambda: Color_shift(canvas))
+    ColorButton.grid(row=9, column=0,sticky=W)
+    Color_undo_Button = Button(toolKitFrame, text="UNDO",
+                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/4),
+                         height=buttonHeight, command=lambda: Contrast(canvas))
+    Color_undo_Button.grid(row=9, column=0, sticky = E)
+
+    ContrastButton = Button(toolKitFrame, text="Contrast",
+                         highlightbackground=highlightbackground, anchor = "w", activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         height=buttonHeight, command=lambda: Contrast(canvas))
+    ContrastButton.grid(row=10, column=0,sticky = W)
+
+    Contrast_undo_Button = Button(toolKitFrame, text="UNDO",
+                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/4),
+                         height=buttonHeight, command=lambda: Contrast(canvas))
+    Contrast_undo_Button.grid(row=10, column=0, sticky = E)
+
+    SharpnessButton = Button(toolKitFrame, text="Sharpness",
+                         highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         height=buttonHeight, command=lambda: Sharpness(canvas))
+    SharpnessButton.grid(row=11,column=0,sticky=W)
+
+    Sharpness_undo_Button = Button(toolKitFrame, text="UNDO",
+                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+                         background=backgroundColour, width=int(buttonWidth/4),
+                         height=buttonHeight, command=lambda: Contrast(canvas))
+    Sharpness_undo_Button.grid(row=11, column=0, sticky = E)
 
     #################################### SCALES ####################################
     global rotate_slider
-    rotate_slider = Scale(toolKitFrame, from_=0, to=360, length=100, width=7, font=('Helvetica', '8'),
+    rotate_slider = Scale(toolKitFrame, from_=-180, to=180, resolution=90,length=140, width=7, font=('Helvetica', '8'),
                           orient=HORIZONTAL,
                           bg="gray20",
                           fg="lime green",
                           highlightbackground="gray", activebackground="deep sky blue", troughcolor="White")
-    rotate_slider.grid(row=1, column=1)
+    rotate_slider.grid(row=7, column=1)
     global bright_slider
-    bright_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'),
+    bright_slider = Scale(toolKitFrame, from_=0.0, to=2.0, resolution=.01, length=140, width=7, font=('Helvetica', '8'),
                           orient=HORIZONTAL,
                           bg="gray20",
                           fg="lime green",
-                          highlightbackground="gray", activebackground="deep sky blue", troughcolor="White")
-    bright_slider.grid(row=2, column=1)
+                          highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid1")
+    bright_slider.grid(row=8, column=1)
+    '''
     global Red_slider
-    Red_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+    Red_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
                        bg="gray20",
                        fg="lime green",
                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="Red")
     Red_slider.grid(row=3, column=1, sticky=N)
     global Green_slider
-    Green_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+    Green_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
                          bg="gray20",
                          fg="lime green",
                          highlightbackground="gray", activebackground="deep sky blue", troughcolor="Green")
     Green_slider.grid(row=3, column=1, sticky=S)
     global Blue_slider
-    Blue_slider = Scale(toolKitFrame, from_=0, to=255, length=100, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+    Blue_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
                         bg="gray20",
                         fg="lime green",
                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="Blue")
     Blue_slider.grid(row=3, column=1)
+    '''
+    global Color_slider
+    Color_slider = Scale(toolKitFrame,from_=0.0, to=3.0, resolution=.01, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid2")
+    Color_slider.grid(row=9, column=1)
+
+    global Contrast_slider
+    Contrast_slider = Scale(toolKitFrame, from_=-3.0, to=3.0, resolution=.05, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid3")
+    Contrast_slider.grid(row=10, column=1)
+
+    global Sharpness_slider
+    Sharpness_slider = Scale(toolKitFrame, from_=-3.0, to=3.0, resolution=.05, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid4")
+    Sharpness_slider.grid(row=11, column=1)
     toolKitFrame.configure(background='gray20')
     toolKitFrame.place(x=0, y=0)
+
+
+    #################################### color_modes ####################################
+    Label(root, text="COLOR_Mode", anchor="center", bg="gray20", fg="lime green").place(x=0, y=365, height=20, width=150)
+    Color_MODES = [
+        ("1-Bit-B/W ", "1-Bit-B/W "),
+        ("8-bit-GRAY", "8-bit-GRAY"),
+        ("Mapped    ", "Mapped    "),
+        ("8-bit-RGB ", "8-bit-RGB "),
+        ("8-bit-CMYK", "8-bit-CMYK"),
+    ]
+    global var_set
+    var_set = StringVar()
+    var_set.set("L")  # initialize
+    count = 0
+    for text, mode in Color_MODES:
+        b = Radiobutton(root, text=text, variable=var_set, value=mode, bg="gray20", fg="lime green",
+                        highlightbackground="gray20", activebackground="deep sky blue").place(x=0, y=385 + count)
+        count = count + 20
+    var_set.set("8-bit-RGB ")
+
+    #*** check button ***
+    global FLOYDSTEINBERG
+    FLOYDSTEINBERG = StringVar()
+    dithering_mode = Checkbutton(root, text ="Dither", anchor="e",variable=FLOYDSTEINBERG, bg="gray20", fg="lime green",highlightbackground="gray20",activebackground="deep sky blue")
+    dithering_mode.deselect()
+    dithering_mode.place(x=0, y=485)
+
+    #*** check button ***
+    global WEB
+    WEB = StringVar()
+    dithering_mode = Checkbutton(root, text ="ADAPTIVE", anchor="e",variable=WEB, bg="gray20", fg="lime green",highlightbackground="gray20",activebackground="deep sky blue")
+    dithering_mode.deselect()
+    dithering_mode.place(x=138, y=425)
+
+    # *** color_box ***
+    global numb_colors_P
+    numb_colors_P = StringVar(root, value='8')
+    color_box_entry = Entry(root, textvariable=numb_colors_P)
+    color_box_entry.place(x=103, y=425, height=20, width=35)
+
+    Button(root, text='Convert_color_mode',  command=lambda: Color_Mode(canvas), bg="gray20", fg="lime green", highlightbackground="gray20",
+           activebackground="deep sky blue").place(x=0, y=507, height=35, width=150)
 
 def menuInit(root, canvas):
     menubar = Menu(root)
     menubar.add_command(label="New", command=lambda: newImage(canvas))
     menubar.add_command(label="Save", command=lambda: save(canvas))
-    menubar.add_command(label="Save As", command=lambda: saveAs(canvas))
-    ## Edit pull-down Menu
-    editmenu = Menu(menubar, tearoff=0)
-    editmenu.add_command(label="Undo   Z", command=lambda: undo(canvas))
-    editmenu.add_command(label="Redo   Y", command=lambda: redo(canvas))
-    menubar.add_cascade(label="Edit", menu=editmenu)
-    root.config(menu=menubar)
     ## Filter pull-down Menu
     filtermenu = Menu(menubar, tearoff=0)
     filtermenu.add_command(label="Black and White",
@@ -872,11 +930,12 @@ def menuInit(root, canvas):
     filtermenu.add_command(label="Posterize",
                            command=lambda: posterize(canvas))
     menubar.add_cascade(label="Filter", menu=filtermenu)
+
     root.config(menu=menubar)
 
 def run():
-    root_width = "855"
-    root_height = "500"
+    root_width = "900"
+    root_height = "600"
     root = Tk()
     root.geometry(root_width + "x" + root_height)  # Width x Height
     root.title("raster-edit")
@@ -901,8 +960,8 @@ def run():
     init(root, canvas)
     root.bind("<Key>", lambda event: keyPressed(canvas, event))
     # and launch the app
+    center_tk_window.center_on_screen(root)
 
     root.mainloop()  # This call BLOCKS (so your program waits)
-
 
 run()
