@@ -9,6 +9,8 @@ import imghdr
 from PIL import ImageDraw
 from collections import *
 import center_tk_window
+import os
+import numpy as np
 
 ################ DRAW ################
 def drawOnImage(canvas):
@@ -17,6 +19,7 @@ def drawOnImage(canvas):
     canvas.data.drawOn = True
     drawWindow = Toplevel(canvas.data.mainWindow)
     drawWindow.title = "Draw"
+
     drawFrame = Frame(drawWindow)
     redButton = Button(drawFrame, bg="red", width=2, \
                        command=lambda: colourChosen(drawWindow, canvas, "red"))
@@ -55,6 +58,7 @@ def drawOnImage(canvas):
                         command=lambda: colourChosen(drawWindow, canvas, "gray"))
     grayButton.grid(row=3, column=2)
     drawFrame.pack(side=BOTTOM)
+    center_tk_window.center_on_screen(drawWindow)
 
 def colourChosen(drawWindow, canvas, colour):
     if canvas.data.image != None:
@@ -125,9 +129,6 @@ def histogram(canvas):
     center_tk_window.center_on_screen(histWindow)
     changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCanvas, initialRGB)
 
-
-
-
 def changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCanvas, previousRGB):
     if canvas.data.histWindowClose == True:
         histWindow.destroy()
@@ -146,8 +147,6 @@ def changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCan
             canvas.data.imageForTk = makeImageForTk(canvas)
             drawImage(canvas)
             displayHistogram(canvas, histWindow, histCanvas)
-
-
 
 def displayHistogram(canvas, histWindow, histCanvas):
     histCanvasWidth = canvas.data.histCanvasWidth
@@ -201,34 +200,30 @@ def colourPop(canvas):
     tkinter.messagebox.showinfo(title="Colour Pop", message="Click on a part of the image which you want in colour",
                                 parent=canvas.data.mainWindow)
     if canvas.data.cropPopToHappen == False:
+
         canvas.data.mainWindow.bind("<ButtonPress-1>", lambda event: getPixel(event, canvas))
 
 def getPixel(event, canvas):
-    # have to check if Colour Pop button is pressed or not, otherwise, the root
-    # events which point to different functions based on what button has been
-    # pressed will get mixed up
-    try:  # to avoid confusion between the diffrent events
-        # asscoaited with crop and colourPop
+
+    try:
+
         if canvas.data.colourPopToHappen == True and \
                 canvas.data.cropPopToHappen == False and canvas.data.image != None:
             data = []
-            # catch the location of the pixel selected by the user
-            # multiply it by the scale to get pixel's olaction of the
-            # actual image
+
             canvas.data.pixelx = \
                 int(round((event.x - canvas.data.imageTopX) * canvas.data.imageScale))
             canvas.data.pixely = \
                 int(round((event.y - canvas.data.imageTopY) * canvas.data.imageScale))
             pixelr, pixelg, pixelb = \
                 canvas.data.image.getpixel((canvas.data.pixelx, canvas.data.pixely))
-            # the amount of deviation allowed from selected pixel's value
+
             tolerance = 60
             for y in range(canvas.data.image.size[1]):
                 for x in range(canvas.data.image.size[0]):
                     r, g, b = canvas.data.image.getpixel((x, y))
                     avg = int(round((r + g + b) / 3.0))
-                    # if the deviation of each pixel value > tolerance,
-                    # make them gray else keep them coloured
+
                     if (abs(r - pixelr) > tolerance or
                             abs(g - pixelg) > tolerance or
                             abs(b - pixelb) > tolerance):
@@ -312,6 +307,93 @@ def performCrop(event, canvas):
 
 def apply(canvas):
         save(canvas)
+
+
+def Split_image_CMYK(canvas):
+    if canvas.data.image != None:
+        threshold_val = Edge_slider.get()
+        int_threshold_val = int(threshold_val)
+        #### make directory to pack image stack in
+        nospace_tail = tail.replace(" ", "")
+        dirName = str(nospace_tail.split(".")[0])
+        path = os.getcwd()
+        absolute_path = ("/"+path+"/" + dirName)
+        try:
+            os.mkdir( absolute_path)
+        except FileExistsError:
+            print("Directory ", dirName, " already exists")
+        ##############################################
+        #gets file that is selected
+        img = canvas.data.image
+        #need to check how many chanels are presetn
+        px = img.load()
+        chanel_numb = len(px[0,0])
+        #if 4 chanels are avalible check if val is 0
+        if chanel_numb == 4:
+                ##############################################
+                ##############################################
+                #black
+                ##############################################
+                ##############################################
+                img= img.convert('RGBA')
+                data = np.array(img)  # "data" is a height x width x 4 numpy array
+                red_temp, green_temp, blue_temp, alpha_temp = data.T  # Temporarily unpack the bands for readability
+                black = (red_temp <= int_threshold_val) & (blue_temp <= int_threshold_val) & (green_temp <= int_threshold_val)
+                data[..., :-1][black.T] = (0, 0, 0)  # Transpose back needed
+                white = (red_temp >= int_threshold_val) | (blue_temp >= int_threshold_val) | (green_temp >= int_threshold_val)
+                data[..., :-1][white.T] = (255, 255, 255)  # Transpose back needed
+                for i in range (255):
+                    gray = (red_temp == int(i) ) & (blue_temp == int(i)) & (green_temp == int(i))
+                    data[..., :-1][gray.T] = (int(i),int(i), int(i))  # Transpose back needed
+                black_img = PIL.Image.fromarray(data)
+                black_img.show()
+                ##############################################
+                ##############################################
+                #cmy
+                ##############################################
+                ##############################################
+                data_clean = np.array(img)  # "data" is a height x width x 4 numpy array
+                red_temp, green_temp, blue_temp, alpha_temp = data_clean.T  # Temporarily unpack the bands for readability
+                black_clean = (red_temp <= int_threshold_val) & (blue_temp <= int_threshold_val) & (green_temp <= int_threshold_val)
+                data_clean[..., :-1][black_clean.T] = (255, 255, 255)  # Transpose back needed
+                for i in range (255):
+                    gray = (red_temp == int(i) ) & (blue_temp == int(i)) & (green_temp == int(i))
+                    data_clean[..., :-1][gray.T] = (255,255, 255)  # Transpose back needed
+                clean_img = PIL.Image.fromarray(data_clean)
+                clean_img.show()
+                ##############################################
+                ##############################################
+                #gray
+                ##############################################
+                ##############################################
+                data_gray = np.array(img)  # "data" is a height x width x 4 numpy array
+                red_temp2, green_temp2, blue_temp2, alpha_temp2 = data_gray.T  # Temporarily unpack the bands for readability
+                for i in range (255):
+                    print("here")
+                    gray = (red_temp2 == int(i) ) & (blue_temp2 == int(i)) & (green_temp2 == int(i))
+                    data_gray[..., :-1][gray.T] = (int(i),int(i), int(i))  # Transpose back needed
+                no_cmyk = (red_temp2 != blue_temp2) | (blue_temp2 != green_temp2) | (red_temp2 != green_temp2)
+                data_gray[..., :-1][no_cmyk.T] = (255,255,255)  # Transpose back needed
+                black_clean = (red_temp2 <= int_threshold_val) & (blue_temp2 <= int_threshold_val) & (green_temp2 <= int_threshold_val)
+                data_gray[..., :-1][black_clean.T] = (255, 255, 255)  # Transpose back needed
+                gray_img  = PIL.Image.fromarray(data_gray)
+                gray_img.show()
+                ##############################################
+                ##############################################
+                red, green, blue, black = clean_img.convert('CMYK').split()
+
+        if chanel_numb != 4:
+            tkinter.messagebox.showinfo("ERROR", "Please use a 4 channel image")
+
+        if chanel_numb ==4:
+            im_invert = ImageOps.invert(red)
+            im_invert.save(absolute_path+'/'+dirName+'-cyan.tiff')
+            im_invert = ImageOps.invert(green)
+            im_invert.save(absolute_path+'/'+dirName+'-magenta.tiff')
+            im_invert = ImageOps.invert(blue)
+            im_invert.save(absolute_path+'/'+dirName+'-yellow.tiff')
+            black_img.save(absolute_path+'/'+dirName+'-black.tiff')
+            gray_img.save(absolute_path+'/'+dirName+'-gray.tiff')
 
 def rotate(canvas):
 
@@ -595,7 +677,6 @@ def posterize(canvas):
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
-
 ############# MENU COMMANDS ################
 
 def saveAs(canvas):
@@ -623,6 +704,10 @@ def newImage(canvas):
     if filetype in ['jpeg', 'bmp', 'png', 'tiff']:
 
         canvas.data.imageLocation = imageName
+        global tail
+        head, tail = os.path.split(imageName)
+
+
         print(imageName)
         im = PIL.Image.open(imageName)
         canvas.data.image = im
@@ -697,12 +782,44 @@ def buttonsInit(root, canvas):
     buttonHeight = 1
     toolKitFrame = Frame(root)
 
+    lbl = Label(toolKitFrame, text="Black_threshold", bg="gray20", fg="lime green")
+    lbl.grid(column=1, row=0, columnspan=3, sticky='we')
+
     cropButton = Button(toolKitFrame, text="Crop",
-                        activebackground=activebackground, fg=fg,
+                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
                         background=backgroundColour,
                         width=buttonWidth, height=buttonHeight,
                         command=lambda: crop(canvas))
-    cropButton.grid(row=0, column=0)
+    cropButton.grid(row=12, column=0)
+    '''
+    RGB_split_Button = Button(toolKitFrame, text="RGB_split",
+                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour,font=('Helvetica', '9'),
+                        width=int(buttonWidth/2), height=buttonHeight,
+                        command=lambda: Split_image_RGB(canvas))
+    RGB_split_Button.grid(row=3, column=1,sticky=W)
+
+    CMY_split_Button = Button(toolKitFrame, text="CMY_split",
+                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour,font=('Helvetica', '9'),
+                        width=int(buttonWidth/2), height=buttonHeight,
+                        command=lambda: Split_image_CMY(canvas))
+    CMY_split_Button.grid(row=3, column=1,sticky= E)
+    '''
+    CMYK_split_Button = Button(toolKitFrame, text="Split_CMYK_G",
+                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour,
+                        width=buttonWidth, height=buttonHeight,
+                        command=lambda: Split_image_CMYK(canvas))
+    CMYK_split_Button.grid(row=2, column=1)
+    '''
+    RGBA_split_Button = Button(toolKitFrame, text="RGBA_split",
+                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour,font=('Helvetica', '9'),
+                        width=int(buttonWidth/2), height=buttonHeight,
+                        command=lambda: Split_image_RGBA(canvas))
+    RGBA_split_Button.grid(row=2, column=1, sticky = E)
+    '''
 
     rotateButton = Button(toolKitFrame, text="Rotate",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
@@ -715,20 +832,23 @@ def buttonsInit(root, canvas):
                           background=backgroundColour,
                           width=buttonWidth, height=buttonHeight,
                           command=lambda: apply(canvas))
-    apply_Button.grid(row=1, column=1)
+    apply_Button.grid(row=1, column=0)
 
     brightnessButton = Button(toolKitFrame, text="Brightness",
                               highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground,
                               fg=fg,
                               background=backgroundColour,
-                              width=int(buttonWidth/1.6), height=buttonHeight,
+                              width=int(buttonWidth), height=buttonHeight,
                               command=lambda: brightness(canvas))
-    brightnessButton.grid(row=8, column=0,sticky=W)
+    brightnessButton.grid(row=8, column=0)
+
+    '''
     brightness_undo_Button = Button(toolKitFrame, text="UNDO",
                                   highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                                   background=backgroundColour, width=int(buttonWidth / 4),
                                   height=buttonHeight, command=lambda: Contrast(canvas))
     brightness_undo_Button.grid(row=8, column=0, sticky=E)
+    '''
     histogramButton = Button(toolKitFrame, text="Histogram",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg=fg,
@@ -736,14 +856,15 @@ def buttonsInit(root, canvas):
                              width=buttonWidth, height=buttonHeight ,
                              command=lambda: histogram(canvas))
     histogramButton.grid(row=3, column=0)
+    '''
     colourPopButton = Button(toolKitFrame, text="Colour_pop",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg=fg,
                              background=backgroundColour,
                              width=buttonWidth, height=buttonHeight,
                              command=lambda: colourPop(canvas))
-    colourPopButton.grid(row=1, column=0)
-
+    colourPopButton.grid(row=13, column=0)
+    '''
     drawButton = Button(toolKitFrame, text="Draw",
                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                         background=backgroundColour, width=buttonWidth,
@@ -753,7 +874,7 @@ def buttonsInit(root, canvas):
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=buttonWidth,
                          height=buttonHeight, command=lambda: reset(canvas))
-    resetButton.grid(row=0, column=1)
+    resetButton.grid(row=0, column=0)
 
     mirrorButton = Button(toolKitFrame, text="Mirror",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
@@ -779,39 +900,40 @@ def buttonsInit(root, canvas):
 
     ColorButton = Button(toolKitFrame, text="Color",
                          highlightbackground=highlightbackground,anchor = "w", activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Color_shift(canvas))
-    ColorButton.grid(row=9, column=0,sticky=W)
+    ColorButton.grid(row=9, column=0)
+    '''
     Color_undo_Button = Button(toolKitFrame, text="UNDO",
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=int(buttonWidth/4),
                          height=buttonHeight, command=lambda: Contrast(canvas))
     Color_undo_Button.grid(row=9, column=0, sticky = E)
-
+    '''
     ContrastButton = Button(toolKitFrame, text="Contrast",
                          highlightbackground=highlightbackground, anchor = "w", activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Contrast(canvas))
-    ContrastButton.grid(row=10, column=0,sticky = W)
-
+    ContrastButton.grid(row=10, column=0)
+    '''
     Contrast_undo_Button = Button(toolKitFrame, text="UNDO",
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=int(buttonWidth/4),
                          height=buttonHeight, command=lambda: Contrast(canvas))
     Contrast_undo_Button.grid(row=10, column=0, sticky = E)
-
+    '''
     SharpnessButton = Button(toolKitFrame, text="Sharpness",
                          highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/1.6),
+                         background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Sharpness(canvas))
-    SharpnessButton.grid(row=11,column=0,sticky=W)
-
+    SharpnessButton.grid(row=11,column=0)
+    '''
     Sharpness_undo_Button = Button(toolKitFrame, text="UNDO",
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=int(buttonWidth/4),
                          height=buttonHeight, command=lambda: Contrast(canvas))
     Sharpness_undo_Button.grid(row=11, column=0, sticky = E)
-
+    '''
     #################################### SCALES ####################################
     global rotate_slider
     rotate_slider = Scale(toolKitFrame, from_=-180, to=180, resolution=90,length=140, width=7, font=('Helvetica', '8'),
@@ -827,6 +949,7 @@ def buttonsInit(root, canvas):
                           fg="lime green",
                           highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid1")
     bright_slider.grid(row=8, column=1)
+    bright_slider.set(1)
     '''
     global Red_slider
     Red_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
@@ -853,13 +976,23 @@ def buttonsInit(root, canvas):
                         fg="lime green",
                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid2")
     Color_slider.grid(row=9, column=1)
-
+    Color_slider.set(1)
     global Contrast_slider
     Contrast_slider = Scale(toolKitFrame, from_=-3.0, to=3.0, resolution=.05, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
                         bg="gray20",
                         fg="lime green",
                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid3")
     Contrast_slider.grid(row=10, column=1)
+    Contrast_slider.set(1)
+    global Edge_slider
+    Edge_slider = Scale(toolKitFrame, from_=0, to=60, resolution=1, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid4")
+    Edge_slider.grid(row=1, column=1)
+    Edge_slider.set(10)
+    toolKitFrame.configure(background='gray20')
+
 
     global Sharpness_slider
     Sharpness_slider = Scale(toolKitFrame, from_=-3.0, to=3.0, resolution=.05, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
@@ -869,6 +1002,9 @@ def buttonsInit(root, canvas):
     Sharpness_slider.grid(row=11, column=1)
     toolKitFrame.configure(background='gray20')
     toolKitFrame.place(x=0, y=0)
+
+
+
 
 
     #################################### color_modes ####################################
@@ -958,7 +1094,7 @@ def run():
     canvas.data.height = canvasHeight
     canvas.data.mainWindow = root
     init(root, canvas)
-    root.bind("<Key>", lambda event: keyPressed(canvas, event))
+    #root.bind("<Key>", lambda event: keyPressed(canvas, event))
     # and launch the app
     center_tk_window.center_on_screen(root)
 
