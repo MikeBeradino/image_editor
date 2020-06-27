@@ -1,4 +1,3 @@
-from tkinter import *
 import PIL.Image
 from PIL import ImageTk
 from PIL import ImageOps
@@ -11,7 +10,9 @@ from collections import *
 import center_tk_window
 import os
 import numpy as np
-
+images =[]
+global Un_do_counter
+Un_do_counter=0
 ################ DRAW ################
 def drawOnImage(canvas):
     canvas.data.colourPopToHappen = False
@@ -77,6 +78,7 @@ def drawDraw(event, canvas):
         save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 ######################## FEATURES ###########################
 def closeHistWindow(canvas):
@@ -145,6 +147,7 @@ def changeColours(canvas, redSlider, blueSlider,greenSlider, histWindow, histCan
             # Apply transform and save
             canvas.data.image = canvas.data.image.convert("RGB", Matrix)
             canvas.data.imageForTk = makeImageForTk(canvas)
+            trim_stuff(canvas)
             drawImage(canvas)
             displayHistogram(canvas, histWindow, histCanvas)
 
@@ -192,16 +195,6 @@ def displayHistogram(canvas, histWindow, histCanvas):
                                    histCanvasHeight - pixelNo / 100.0 - 1 - margin, i + 2 + margin, \
                                    histCanvasHeight - pixelNo / 100.0 + 1 - margin, \
                                    fill="blue", outline="blue")
-
-def colourPop(canvas):
-    canvas.data.cropPopToHappen = False
-    canvas.data.colourPopToHappen = True
-    canvas.data.drawOn = False
-    tkinter.messagebox.showinfo(title="Colour Pop", message="Click on a part of the image which you want in colour",
-                                parent=canvas.data.mainWindow)
-    if canvas.data.cropPopToHappen == False:
-
-        canvas.data.mainWindow.bind("<ButtonPress-1>", lambda event: getPixel(event, canvas))
 
 def getPixel(event, canvas):
 
@@ -303,11 +296,11 @@ def performCrop(event, canvas):
     save(canvas)
     canvas.data.undoQueue.append(canvas.data.image.copy())
     canvas.data.imageForTk = makeImageForTk(canvas)
+    trim_stuff(canvas)
     drawImage(canvas)
 
 def apply(canvas):
         save(canvas)
-
 
 def Split_image_CMYK(canvas):
     if canvas.data.image != None:
@@ -395,11 +388,34 @@ def Split_image_CMYK(canvas):
             black_img.save(absolute_path+'/'+dirName+'-black.tiff')
             gray_img.save(absolute_path+'/'+dirName+'-gray.tiff')
 
-def rotate(canvas):
-
+def gamma(canvas):
     if canvas.data.image != None:
-        angel = rotate_slider.get()
-        canvas.data.image = canvas.data.image.rotate(float(angel))
+        im = np.array(canvas.data.image)
+        gamma_value = gamma_slider.get()
+        float_gamma_value = (float(gamma_value))
+        im_gamma = 255.0 * (im / 255.0) ** (float_gamma_value)
+        canvas.data.image = PIL.Image.fromarray(np.uint8(im_gamma))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
+        drawImage(canvas)
+
+def Invert(canvas):
+    if canvas.data.image != None:
+        im = np.array(canvas.data.image)
+        im_invert = 255 - im
+        canvas.data.image = PIL.Image.fromarray((im_invert))
+        canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
+        drawImage(canvas)
+
+def Stamp(canvas):
+    if canvas.data.image != None:
+        num_colors = stamp_slider.get()
+        int_numb_colors = int(num_colors)
+        im = np.array(canvas.data.image)
+        im_stamp = (im > int_numb_colors) * 255
+        canvas.data.image = PIL.Image.fromarray(np.uint8(im_stamp))
+        trim_stuff(canvas)
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
 
@@ -410,6 +426,7 @@ def Sharpness(canvas):
         sharp_val = Sharpness_slider.get()
         canvas.data.image =enhancer.enhance(float(sharp_val))
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 
 def Contrast(canvas):
@@ -418,8 +435,20 @@ def Contrast(canvas):
         enhancer = ImageEnhance.Contrast(canvas.data.image)
         contarst_val = Contrast_slider.get()
         canvas.data.image =enhancer.enhance(float(contarst_val))
+        trim_stuff(canvas)
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
+
+def trim_stuff(canvas):
+    if canvas.data.image != None:
+        global Un_do_counter
+        int_array_size = int(len(images))
+        print("array size")
+        print(int_array_size)
+        print("couter")
+        print(Un_do_counter)
+        Un_do_counter += 1
+        images.insert(Un_do_counter, canvas.data.image)
 
 def Color_shift(canvas):
     print("bright")
@@ -437,6 +466,7 @@ def brightness(canvas):
         bright_val = bright_slider.get()
         canvas.data.image =enhancer.enhance(float(bright_val))
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 
 def reset(canvas):
@@ -445,8 +475,10 @@ def reset(canvas):
     canvas.data.drawOn = False
     ### change back to original image
     if canvas.data.image != None:
+        global Un_do_counter
+        Un_do_counter = 0
+        images.clear()
         canvas.data.image = canvas.data.originalImage.copy()
-        #save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
@@ -460,6 +492,7 @@ def mirror(canvas):
         #save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 
 def flip(canvas):
@@ -471,6 +504,7 @@ def flip(canvas):
 
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 
 def transpose(canvas):
@@ -496,6 +530,7 @@ def transpose(canvas):
         save(canvas)
         canvas.data.undoQueue.append(canvas.data.image.copy())
         canvas.data.imageForTk = makeImageForTk(canvas)
+        trim_stuff(canvas)
         drawImage(canvas)
 
 def Color_Mode(canvas):
@@ -532,152 +567,36 @@ def Color_Mode(canvas):
             canvas.data.imageForTk = makeImageForTk(canvas)
             drawImage(canvas)
 
-############### FILTERS ######################
-
-def covertGray(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    #### The existing method to convert to a grayscale image converts the ####
-    ####         image mode, so I used my own function to convert         ####
-    # value of each channel of a pixel is set to the average of the original
-    # values of the channels
-    if canvas.data.image != None:
-        data = []
-        for col in range(canvas.data.image.size[1]):
-            for row in range(canvas.data.image.size[0]):
-                r, g, b = canvas.data.image.getpixel((row, col))
-                avg = int(round((r + g + b) / 3.0))
-                R, G, B = avg, avg, avg
-                data.append((R, G, B))
-        canvas.data.image.putdata(data)
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.imageForTk = makeImageForTk(canvas)
-        drawImage(canvas)
-
-def sepia(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    # this method first converts the image to B&W and then adds the
-    # same amount of red and green to every pixel
-    if canvas.data.image != None:
-        sepiaData = []
-        for col in range(canvas.data.image.size[1]):
-            for row in range(canvas.data.image.size[0]):
-                r, g, b = canvas.data.image.getpixel((row, col))
-                avg = int(round((r + g + b) / 3.0))
-                R, G, B = avg + 100, avg + 50, avg
-                sepiaData.append((R, G, B))
-        canvas.data.image.putdata(sepiaData)
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.imageForTk = makeImageForTk(canvas)
-        drawImage(canvas)
-
-def invert(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    if canvas.data.image != None:
-        canvas.data.image = ImageOps.invert(canvas.data.image)
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.imageForTk = makeImageForTk(canvas)
-        drawImage(canvas)
-
-def solarize(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    solarizeWindow = Toplevel(canvas.data.mainWindow)
-    solarizeWindow.title("Solarize")
-    solarizeSlider = Scale(solarizeWindow, from_=0, to=255, orient=HORIZONTAL)
-    solarizeSlider.pack()
-    OkSolarizeFrame = Frame(solarizeWindow)
-    OkSolarizeButton = Button(OkSolarizeFrame, text="OK",
-                              command=lambda: closeSolarizeWindow(canvas))
-    OkSolarizeButton.grid(row=0, column=0)
-    OkSolarizeFrame.pack(side=BOTTOM)
-    ### beacsue intial silderVal=0
-    performSolarize(canvas, solarizeWindow, solarizeSlider, 255)
-
-def performSolarize(canvas, solarizeWindow, solarizeSlider, previousThreshold):
-    if canvas.data.solarizeWindowClose == True:
-        solarizeWindow.destroy()
-        canvas.data.solarizeWindowClose = False
-
-    else:
-        # the  slider denotes the % of solarization that the user wants,
-        # so the threshold (above which pixels are inverted) is inversely
-        # related to the slider value
-        if solarizeWindow.winfo_exists():
-            sliderVal = solarizeSlider.get()
-            threshold_ = 255 - sliderVal
-            if canvas.data.image != None and threshold_ != previousThreshold:
-                canvas.data.image = ImageOps.solarize(canvas.data.image,
-                                                      threshold=threshold_)
-                canvas.data.imageForTk = makeImageForTk(canvas)
-                drawImage(canvas)
-            canvas.after(200, lambda: performSolarize(canvas,
-                                                      solarizeWindow, solarizeSlider, threshold_))
-
-def closeSolarizeWindow(canvas):
-    if canvas.data.image != None:
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.solarizeWindowClose = True
-
-def posterize(canvas):
-    canvas.data.colourPopToHappen = False
-    canvas.data.cropPopToHappen = False
-    canvas.data.drawOn = False
-    # we basically reduce the range of colurs from 256 to 5 bits
-    # and so, assign a single new value to each colour value
-    # in each succesive range
-    posterData = []
-    if canvas.data.image != None:
-        for col in range(canvas.data.imageSize[1]):
-            for row in range(canvas.data.imageSize[0]):
-                r, g, b = canvas.data.image.getpixel((row, col))
-                if r in range(32):
-                    R = 0
-                elif r in range(32, 96):
-                    R = 64
-                elif r in range(96, 160):
-                    R = 128
-                elif r in range(160, 224):
-                    R = 192
-                elif r in range(224, 256):
-                    R = 255
-                if g in range(32):
-                    G = 0
-                elif g in range(32, 96):
-                    G = 64
-                elif g in range(96, 160):
-                    G = 128
-                elif r in range(160, 224):
-                    g = 192
-                elif r in range(224, 256):
-                    G = 255
-                if b in range(32):
-                    B = 0
-                elif b in range(32, 96):
-                    B = 64
-                elif b in range(96, 160):
-                    B = 128
-                elif b in range(160, 224):
-                    B = 192
-                elif b in range(224, 256):
-                    B = 255
-                posterData.append((R, G, B))
-        canvas.data.image.putdata(posterData)
-        save(canvas)
-        canvas.data.undoQueue.append(canvas.data.image.copy())
-        canvas.data.imageForTk = makeImageForTk(canvas)
-        drawImage(canvas)
-
 ############# MENU COMMANDS ################
+def Un_do(canvas):
+    print("undo")
+    if canvas.data.image != None:
+        global Un_do_counter
+        if Un_do_counter > 0:
+            Un_do_counter -= 1
+            print("in UNDO array size")
+            print (len(images))
+            print("in UNDO counter ")
+            print(Un_do_counter)
+            canvas.data.image = images[Un_do_counter]
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
+
+def Re_do(canvas):
+    print("Redo")
+    print("undo")
+    if canvas.data.image != None:
+        global Un_do_counter
+        int_array_size = int(len(images))
+        if Un_do_counter < int(len(images)):
+            Un_do_counter += 1
+            print("in UNDO array size")
+            print (len(images))
+            print("in UNDO counter ")
+            print(Un_do_counter)
+            canvas.data.image = images[Un_do_counter]
+            canvas.data.imageForTk = makeImageForTk(canvas)
+            drawImage(canvas)
 
 def saveAs(canvas):
     # ask where the user wants to save the file
@@ -707,13 +626,22 @@ def newImage(canvas):
         global tail
         head, tail = os.path.split(imageName)
 
-
-        print(imageName)
         im = PIL.Image.open(imageName)
         canvas.data.image = im
         canvas.data.originalImage = im.copy()
         canvas.data.undoQueue.append(im.copy())
         canvas.data.imageSize = im.size  # Original Image dimensions
+
+        global Un_do_counter
+        Un_do_counter = 0
+        images.clear()
+        images.insert(0, canvas.data.image)
+
+        print("in new image array length")
+        print(len(images))
+        print("in new image undo counter")
+        print(Un_do_counter)
+
         canvas.data.imageForTk = makeImageForTk(canvas)
         drawImage(canvas)
     else:
@@ -757,14 +685,7 @@ def init(root, canvas):
     buttonsInit(root, canvas)
     menuInit(root, canvas)
     canvas.data.image = None
-    canvas.data.angleSelected = None
-    canvas.data.rotateWindowClose = False
-    canvas.data.brightnessWindowClose = False
-    canvas.data.brightnessLevel = None
     canvas.data.histWindowClose = False
-    canvas.data.solarizeWindowClose = False
-    canvas.data.posterizeWindowClose = False
-    canvas.data.colourPopToHappen = False
     canvas.data.cropPopToHappen = False
     canvas.data.endCrop = False
     canvas.data.drawOn = True
@@ -783,50 +704,72 @@ def buttonsInit(root, canvas):
     toolKitFrame = Frame(root)
 
     lbl = Label(toolKitFrame, text="Black_threshold", bg="gray20", fg="lime green")
-    lbl.grid(column=1, row=0, columnspan=3, sticky='we')
+    lbl.grid(column=1, row=2, columnspan=3, sticky='we')
+
+    color_mode_Button = Button(toolKitFrame, text='Convert_color_mode',
+                        command=lambda: Color_Mode(canvas), bg="gray20", fg="lime green",
+                        highlightbackground="gray20", activebackground="deep sky blue"
+                        ,width=buttonWidth, height=int(buttonHeight*2))
+    color_mode_Button .grid(row=13, column=0)
+
+    undoButton = Button(toolKitFrame, text="UNDO",
+                        activebackground=activebackground, anchor = "e",fg=fg, highlightbackground=highlightbackground,
+                        background=backgroundColour, font=('Helvetica', '9'),
+                        width=int((buttonWidth)/2), height=buttonHeight,
+                        command=lambda: Un_do(canvas))
+    undoButton.grid(row=0, column=1, sticky = E)
+
+    redoButton = Button(toolKitFrame, text="REDO",
+                        activebackground=activebackground, anchor = "w",fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour, font=('Helvetica', '9'),
+                        width=int((buttonWidth)/2), height=buttonHeight,
+                        command=lambda: Re_do(canvas))
+    redoButton.grid(row=0, column=1,sticky= W)
+
+    saveButton = Button(toolKitFrame, text="SAVE",
+                        activebackground=activebackground, anchor = "e",fg=fg, highlightbackground=highlightbackground,
+                        background=backgroundColour, font=('Helvetica', '9'),
+                        width=int((buttonWidth)/2), height=buttonHeight,
+                        command=lambda: save(canvas))
+    saveButton.grid(row=1, column=1, sticky = E)
+
+    save_as_Button = Button(toolKitFrame, text="SAVE_AS",
+                        activebackground=activebackground, anchor = "w",fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour, font=('Helvetica', '9'),
+                        width=int((buttonWidth)/2), height=buttonHeight,
+                        command=lambda: saveAs(canvas))
+    save_as_Button.grid(row=1, column=1,sticky= W)
+
+
 
     cropButton = Button(toolKitFrame, text="Crop",
                         activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
                         background=backgroundColour,
                         width=buttonWidth, height=buttonHeight,
                         command=lambda: crop(canvas))
-    cropButton.grid(row=12, column=0)
-    '''
-    RGB_split_Button = Button(toolKitFrame, text="RGB_split",
-                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
-                        background=backgroundColour,font=('Helvetica', '9'),
-                        width=int(buttonWidth/2), height=buttonHeight,
-                        command=lambda: Split_image_RGB(canvas))
-    RGB_split_Button.grid(row=3, column=1,sticky=W)
+    cropButton.grid(row=15, column=1)
 
-    CMY_split_Button = Button(toolKitFrame, text="CMY_split",
-                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
-                        background=backgroundColour,font=('Helvetica', '9'),
-                        width=int(buttonWidth/2), height=buttonHeight,
-                        command=lambda: Split_image_CMY(canvas))
-    CMY_split_Button.grid(row=3, column=1,sticky= E)
-    '''
+    stamp_Button = Button(toolKitFrame, text="Stamp",
+                        activebackground=activebackground, anchor = "w",fg=fg,highlightbackground=highlightbackground,
+                        background=backgroundColour,
+                        width=buttonWidth, height=buttonHeight,
+                        command=lambda: Stamp(canvas))
+    stamp_Button.grid(row=12, column=0)
+
     CMYK_split_Button = Button(toolKitFrame, text="Split_CMYK_G",
                         activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
                         background=backgroundColour,
                         width=buttonWidth, height=buttonHeight,
                         command=lambda: Split_image_CMYK(canvas))
-    CMYK_split_Button.grid(row=2, column=1)
-    '''
-    RGBA_split_Button = Button(toolKitFrame, text="RGBA_split",
-                        activebackground=activebackground, fg=fg,highlightbackground=highlightbackground,
-                        background=backgroundColour,font=('Helvetica', '9'),
-                        width=int(buttonWidth/2), height=buttonHeight,
-                        command=lambda: Split_image_RGBA(canvas))
-    RGBA_split_Button.grid(row=2, column=1, sticky = E)
-    '''
+    CMYK_split_Button.grid(row=3, column=0)
 
-    rotateButton = Button(toolKitFrame, text="Rotate",
-                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
+    GammaButton = Button(toolKitFrame, text="Gamma",
+                          highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground, fg=fg,
                           background=backgroundColour,
                           width=buttonWidth, height=buttonHeight,
-                          command=lambda: rotate(canvas))
-    rotateButton.grid(row=7, column=0)
+                          command=lambda: gamma(canvas))
+    GammaButton.grid(row=7, column=0)
+
     apply_Button = Button(toolKitFrame, text="Apply",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                           background=backgroundColour,
@@ -842,60 +785,52 @@ def buttonsInit(root, canvas):
                               command=lambda: brightness(canvas))
     brightnessButton.grid(row=8, column=0)
 
-    '''
-    brightness_undo_Button = Button(toolKitFrame, text="UNDO",
-                                  highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
-                                  background=backgroundColour, width=int(buttonWidth / 4),
-                                  height=buttonHeight, command=lambda: Contrast(canvas))
-    brightness_undo_Button.grid(row=8, column=0, sticky=E)
-    '''
     histogramButton = Button(toolKitFrame, text="Histogram",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg=fg,
                              background=backgroundColour,
                              width=buttonWidth, height=buttonHeight ,
                              command=lambda: histogram(canvas))
-    histogramButton.grid(row=3, column=0)
-    '''
-    colourPopButton = Button(toolKitFrame, text="Colour_pop",
-                             highlightbackground=highlightbackground, activebackground=activebackground,
-                             fg=fg,
-                             background=backgroundColour,
-                             width=buttonWidth, height=buttonHeight,
-                             command=lambda: colourPop(canvas))
-    colourPopButton.grid(row=13, column=0)
-    '''
+    histogramButton.grid(row=4, column=0)
+
     drawButton = Button(toolKitFrame, text="Draw",
                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                         background=backgroundColour, width=buttonWidth,
                         height=buttonHeight, command=lambda: drawOnImage(canvas))
-    drawButton.grid(row=2, column=0)
+    drawButton.grid(row=4, column=1)
     resetButton = Button(toolKitFrame, text="Reset",
                          highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=buttonWidth,
                          height=buttonHeight, command=lambda: reset(canvas))
     resetButton.grid(row=0, column=0)
 
+    InvertButton = Button(toolKitFrame, text="Invert_color",
+                        highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
+                        background=backgroundColour,
+                        width=buttonWidth , height=buttonHeight,
+                        command=lambda: Invert(canvas))
+    InvertButton.grid(row=14, column=1 )
+
     mirrorButton = Button(toolKitFrame, text="Mirror",
                           highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
                           background=backgroundColour,
-                          width=int(buttonWidth / 4), height=buttonHeight,
+                          width=int(buttonWidth / 4), height=int(buttonHeight*2),
                           command=lambda: mirror(canvas))
-    mirrorButton.grid(row=5, column=0, sticky=W)
+    mirrorButton.grid(row=13, column=1, sticky=W)
 
     flipButton = Button(toolKitFrame, text="Flip",
                         highlightbackground=highlightbackground, activebackground=activebackground, fg="lime green",
                         background=backgroundColour,
-                        width=int(buttonWidth / 4), height=buttonHeight,
+                        width=int(buttonWidth / 4), height=int(buttonHeight*2),
                         command=lambda: flip(canvas))
-    flipButton.grid(row=5, column=0, sticky=S)
+    flipButton.grid(row=13, column=1, sticky=S)
 
     transposeButton = Button(toolKitFrame, text="Trans",
                              highlightbackground=highlightbackground, activebackground=activebackground,
                              fg="lime green",
                              background=backgroundColour, width=int(buttonWidth / 4),
-                             height=buttonHeight, command=lambda: transpose(canvas))
-    transposeButton.grid(row=5, column=0, sticky=E)
+                             height=int(buttonHeight*2), command=lambda: transpose(canvas))
+    transposeButton.grid(row=13, column=1, sticky=E)
 
 
     ColorButton = Button(toolKitFrame, text="Color",
@@ -903,45 +838,27 @@ def buttonsInit(root, canvas):
                          background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Color_shift(canvas))
     ColorButton.grid(row=9, column=0)
-    '''
-    Color_undo_Button = Button(toolKitFrame, text="UNDO",
-                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/4),
-                         height=buttonHeight, command=lambda: Contrast(canvas))
-    Color_undo_Button.grid(row=9, column=0, sticky = E)
-    '''
+
     ContrastButton = Button(toolKitFrame, text="Contrast",
                          highlightbackground=highlightbackground, anchor = "w", activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Contrast(canvas))
     ContrastButton.grid(row=10, column=0)
-    '''
-    Contrast_undo_Button = Button(toolKitFrame, text="UNDO",
-                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/4),
-                         height=buttonHeight, command=lambda: Contrast(canvas))
-    Contrast_undo_Button.grid(row=10, column=0, sticky = E)
-    '''
+
     SharpnessButton = Button(toolKitFrame, text="Sharpness",
                          highlightbackground=highlightbackground, anchor = "w",activebackground=activebackground, fg=fg,
                          background=backgroundColour, width=int(buttonWidth),
                          height=buttonHeight, command=lambda: Sharpness(canvas))
     SharpnessButton.grid(row=11,column=0)
-    '''
-    Sharpness_undo_Button = Button(toolKitFrame, text="UNDO",
-                         highlightbackground=highlightbackground, activebackground=activebackground, fg=fg,
-                         background=backgroundColour, width=int(buttonWidth/4),
-                         height=buttonHeight, command=lambda: Contrast(canvas))
-    Sharpness_undo_Button.grid(row=11, column=0, sticky = E)
-    '''
+
     #################################### SCALES ####################################
-    global rotate_slider
-    rotate_slider = Scale(toolKitFrame, from_=-180, to=180, resolution=90,length=140, width=7, font=('Helvetica', '8'),
+    global gamma_slider
+    gamma_slider = Scale(toolKitFrame, from_=-2, to=20, resolution=.1,length=140, width=7, font=('Helvetica', '8'),
                           orient=HORIZONTAL,
                           bg="gray20",
                           fg="lime green",
                           highlightbackground="gray", activebackground="deep sky blue", troughcolor="White")
-    rotate_slider.grid(row=7, column=1)
+    gamma_slider.grid(row=7, column=1)
     global bright_slider
     bright_slider = Scale(toolKitFrame, from_=0.0, to=2.0, resolution=.01, length=140, width=7, font=('Helvetica', '8'),
                           orient=HORIZONTAL,
@@ -950,26 +867,6 @@ def buttonsInit(root, canvas):
                           highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid1")
     bright_slider.grid(row=8, column=1)
     bright_slider.set(1)
-    '''
-    global Red_slider
-    Red_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
-                       bg="gray20",
-                       fg="lime green",
-                       highlightbackground="gray", activebackground="deep sky blue", troughcolor="Red")
-    Red_slider.grid(row=3, column=1, sticky=N)
-    global Green_slider
-    Green_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
-                         bg="gray20",
-                         fg="lime green",
-                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="Green")
-    Green_slider.grid(row=3, column=1, sticky=S)
-    global Blue_slider
-    Blue_slider = Scale(toolKitFrame, from_=0, to=255, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
-                        bg="gray20",
-                        fg="lime green",
-                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="Blue")
-    Blue_slider.grid(row=3, column=1)
-    '''
     global Color_slider
     Color_slider = Scale(toolKitFrame,from_=0.0, to=3.0, resolution=.01, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
                         bg="gray20",
@@ -989,10 +886,9 @@ def buttonsInit(root, canvas):
                         bg="gray20",
                         fg="lime green",
                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid4")
-    Edge_slider.grid(row=1, column=1)
+    Edge_slider.grid(row=3, column=1)
     Edge_slider.set(10)
     toolKitFrame.configure(background='gray20')
-
 
     global Sharpness_slider
     Sharpness_slider = Scale(toolKitFrame, from_=-3.0, to=3.0, resolution=.05, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
@@ -1001,14 +897,19 @@ def buttonsInit(root, canvas):
                         highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid4")
     Sharpness_slider.grid(row=11, column=1)
     toolKitFrame.configure(background='gray20')
+
+
+    global stamp_slider
+    stamp_slider = Scale(toolKitFrame, from_=0, to=255, resolution=1, length=140, width=7, font=('Helvetica', '8'), orient=HORIZONTAL,
+                        bg="gray20",
+                        fg="lime green",
+                        highlightbackground="gray", activebackground="deep sky blue", troughcolor="DarkOrchid4")
+    stamp_slider.grid(row=12, column=1)
+    toolKitFrame.configure(background='gray20')
     toolKitFrame.place(x=0, y=0)
 
-
-
-
-
     #################################### color_modes ####################################
-    Label(root, text="COLOR_Mode", anchor="center", bg="gray20", fg="lime green").place(x=0, y=365, height=20, width=150)
+    #Label(root, text="COLOR_Mode", bg="gray20",anchor = "w", fg="lime green").place(x=0, y=365, height=20, width=150)
     Color_MODES = [
         ("1-Bit-B/W ", "1-Bit-B/W "),
         ("8-bit-GRAY", "8-bit-GRAY"),
@@ -1022,7 +923,7 @@ def buttonsInit(root, canvas):
     count = 0
     for text, mode in Color_MODES:
         b = Radiobutton(root, text=text, variable=var_set, value=mode, bg="gray20", fg="lime green",
-                        highlightbackground="gray20", activebackground="deep sky blue").place(x=0, y=385 + count)
+                        highlightbackground="gray20", activebackground="deep sky blue").place(x=0, y=390 + count)
         count = count + 20
     var_set.set("8-bit-RGB ")
 
@@ -1031,47 +932,29 @@ def buttonsInit(root, canvas):
     FLOYDSTEINBERG = StringVar()
     dithering_mode = Checkbutton(root, text ="Dither", anchor="e",variable=FLOYDSTEINBERG, bg="gray20", fg="lime green",highlightbackground="gray20",activebackground="deep sky blue")
     dithering_mode.deselect()
-    dithering_mode.place(x=0, y=485)
+    dithering_mode.place(x=0, y=490)
 
     #*** check button ***
     global WEB
     WEB = StringVar()
     dithering_mode = Checkbutton(root, text ="ADAPTIVE", anchor="e",variable=WEB, bg="gray20", fg="lime green",highlightbackground="gray20",activebackground="deep sky blue")
     dithering_mode.deselect()
-    dithering_mode.place(x=138, y=425)
+    dithering_mode.place(x=50, y=490)
 
     # *** color_box ***
     global numb_colors_P
     numb_colors_P = StringVar(root, value='8')
     color_box_entry = Entry(root, textvariable=numb_colors_P)
-    color_box_entry.place(x=103, y=425, height=20, width=35)
-
-    Button(root, text='Convert_color_mode',  command=lambda: Color_Mode(canvas), bg="gray20", fg="lime green", highlightbackground="gray20",
-           activebackground="deep sky blue").place(x=0, y=507, height=35, width=150)
+    color_box_entry.place(x=90, y=430, height=20, width=35)
 
 def menuInit(root, canvas):
     menubar = Menu(root)
     menubar.add_command(label="New", command=lambda: newImage(canvas))
-    menubar.add_command(label="Save", command=lambda: save(canvas))
-    ## Filter pull-down Menu
-    filtermenu = Menu(menubar, tearoff=0)
-    filtermenu.add_command(label="Black and White",
-                           command=lambda: covertGray(canvas))
-    filtermenu.add_command(label="Sepia",
-                           command=lambda: sepia(canvas))
-    filtermenu.add_command(label="Invert",
-                           command=lambda: invert(canvas))
-    filtermenu.add_command(label="Solarize",
-                           command=lambda: solarize(canvas))
-    filtermenu.add_command(label="Posterize",
-                           command=lambda: posterize(canvas))
-    menubar.add_cascade(label="Filter", menu=filtermenu)
-
     root.config(menu=menubar)
 
 def run():
     root_width = "900"
-    root_height = "600"
+    root_height = "515"
     root = Tk()
     root.geometry(root_width + "x" + root_height)  # Width x Height
     root.title("raster-edit")
@@ -1080,13 +963,9 @@ def run():
     # ***main menue***
     menu = Menu(root)
     root.config(menu=menu)
-
     root.configure(background='gray20')
-
-
     canvas = Canvas(root, width=canvasWidth, height=canvasHeight,
                     background="gray20")
-
     # Set up canvas data and call init
     class Struct: pass
     canvas.data = Struct()
@@ -1097,7 +976,6 @@ def run():
     #root.bind("<Key>", lambda event: keyPressed(canvas, event))
     # and launch the app
     center_tk_window.center_on_screen(root)
-
     root.mainloop()  # This call BLOCKS (so your program waits)
 
 run()
